@@ -1,158 +1,217 @@
-#include <vector>
-#include <iostream>
+#include "bigint.hpp"
 
-class bigint {
-	private:
-		std::vector<int> data;
-		bool			 isneg;
-	public:
-		bigint():data(),isneg(false){}
-		bigint(int value):data(){
-			if (value == 0){
-				data.push_back(0);	
-				return	;
-			}
-			long long v = value;
-			isneg = v< 0;	
-			if (isneg)
-				v= -v;
-			while(v != 0){
-				data.push_back(v % 10);
-				v /= 10;
-			}
-		}
-		bigint(bigint const & other){
-			if (*this == other)
-				return ;
-			*this = other;
-		}
-		bigint & operator=(bigint const & other){
-			if (*this == other)
-				return *this;
-			for(auto it = other.data.begin(); it != other.data.end(); it++)
-				this->data.push_back(*it);
-			return *this;
-		}
-		bigint  operator+(bigint const & other) const{
-			bigint ret;
-			auto a = this->data.begin();
-			auto b = other.data.begin();
-			int reste = 0;
-			while (a != this->data.end() || b != other.data.end() || reste != 0){ //Tout consommer avant de sortir
-				int val_a = 0;
-				int val_b = 0;
-				if (a != this->data.end()){
-					val_a = *a;
-					++a;
-				}
-				if (b != other.data.end()){
-					val_b = *b;
-					++b;
-				}
-				int sum = val_a + val_b + reste;
-				ret.data.push_back(sum % 10);
-				reste = sum / 10;
-			}
-			return ret;
-		}
-		bigint  operator+(int other){
-			bigint o(other);
-			return *this + o;
-		}
-		bigint  operator+=(bigint const & other){
-			*this = *this + other;
-			return *this;
-		}
-		/*bigint const & operator++(int other){
-			return *this + bigint(1);
-		}*/
-		bigint  operator++(int other){
-			return *this + bigint(1);
-		}
-		bigint  operator<<(int dec){
-			if (dec < 0)
-				return *this;
-			while (dec != 0){
-				this->data.insert(this->data.begin(), 0);
-				dec /= 10;
-			}
-			return *this;
-		}
-		bigint  operator<<=(int dec){
-			return *this << dec;
-		}
-		bigint  operator>>=(int dec){
-			if (dec == 1){
-				data.erase(data.begin());
-				return *this;
-			}
-			auto begin = data.begin();
-			auto end = data.begin();
-			for (int i = 0; i < dec && end != data.end(); i++, end++)
-				;
-			data.erase(begin, end);
-			return *this;
-		}
-		bool	 operator<(bigint const & other){ return true;}
-		bool	 operator<=(bigint const & other){ return true;}
-
-		bool	 operator==(bigint const & other){ return true;}
-
-		bool	 operator!=(bigint const & other){ return true;}
-
-		bool	 operator>(bigint const & other){ return true;}
-
-		bool	 operator>=(bigint const & other){ return true;}
-
-};
-
-std::ostream& operator<<(std::ostream& os, bigint const & b){
-		return os;
+bigint::bigint():data(),isneg(false){
 }
 
-int main(void)
-{
-	const bigint a(42);
-	bigint b(21), c, d(1337), e(d);
+bigint::bigint(int val):data(),isneg(val < 0){
+	long long value = val;
+	if (value < 0)
+		value *= -1;
+	if (value == 0){
+		data.push_back(0);
+		return;
+	}
+	while(value != 0){
+		data.push_back(value % 10);
+		value /= 10;
+	}
+}
 
-	// base test
-	std::cout << "a = " << a << std::endl;
-	std::cout << "b = " << b << std::endl;
-	std::cout << "c = " << c << std::endl;
-	std::cout << "d = " << d << std::endl;
-	std::cout << "e = " << e << std::endl;
+bigint::bigint(bigint const & other):data(),isneg(other.isneg){
+	if (this == &other)
+		return;
+	for(auto it = other.data.begin(); it != other.data.end(); it++)
+		data.push_back(*it);
+}
 
-	std::cout << "a + b = " << a + b << std::endl;
-	std::cout << "a + c = " << a + c << std::endl;
-	std::cout << "(c += a) = " << (c += a) << std::endl;
+bigint & bigint::operator=(bigint const & other){
+	if (this == &other)
+		return *this;
+	this->isneg = other.isneg;
+	data.erase(data.begin(), data.end());
+	for (auto it = other.data.begin(); it != other.data.end(); it++)
+		data.push_back(*it);
+	return *this;
+}
 
-	std::cout << "b = " << b << std::endl;
-	std::cout << "++b = " << ++b << std::endl;
-	std::cout << "b++ = " << b++ << std::endl;
+void bigint::compact(){
+	if (data.size() == 0)
+		return;
+	auto start = data.begin();
+	start++;
+	auto end = start;
+	for (; start != data.end(); start++){
+		for (end = start; *start == 0 && end != data.end() && *end == 0; end++);
+		if (*start == 0 && end == data.end()){
+			data.erase(start, end);
+			break;
+		}
+	}
+}
 
-	// b = 23, b << 10 -> 23000000000 + 42 = 23000000042
-	std::cout << "(b << 10) + 42 = " << ((b << 10) + 42) << std::endl;
-	std::cout << "(d <<= 4) = " << (d <<= 4) << ", d: " << d << std::endl;
-	std::cout << "(d >>= 2) = " << (d >>= (const bigint)2) << ", d: " << d << std::endl;
+std::ostream & bigint::write(std::ostream & stream) const{
+	if (isneg)
+		stream << "-";
+	if (data.size() == 0)
+		stream << "0";
+	auto it = data.rbegin();
+/*	for (;it != data.rend() && *it == 0; it++)
+		;
+	if (it == data.rend())
+		stream << "0";*/
+	for (; it != data.rend(); it++)
+		stream << *it;
+	return stream;
+}
 
-	std::cout << "a = " << a << std::endl; // a = 42
-	std::cout << "d = " << d << std::endl; // d = 5348
+bigint bigint::operator+(bigint const & other) const{
+	bigint res;
+	int reste = 0;
+	auto it_a = data.begin();
+	auto it_b = other.data.begin();
+	while (it_a != data.end() || it_b != other.data.end() || reste != 0){
+		int val_a = 0;
+		int val_b = 0;
+		if (it_a != data.end()){
+			val_a = *it_a * ((isneg)?-1:1);
+			it_a++;
+		}
+		if (it_b != other.data.end()){
+			val_b = *it_b * ((other.isneg)?-1:1);
+			it_b++;
+		}
+		int sum = val_a + val_b + reste;
+		int digit = sum % 10;
+		if (digit < 0)
+			digit *= -1;
+		res.data.push_back(digit);
+		reste = sum / 10;
+		if (sum < 0)
+			res.isneg = true;
+		else if (sum > 0)
+			res.isneg = false;
+	}
+	res.compact();
+	return res;
+}
 
-	std::cout << "(d < a) = " << (d < a) << std::endl; // (d < a) = 0
-	std::cout << "(d > a) = " << (d > a) << std::endl; // (d > a) = 1
-	std::cout << "(d == d) = " << (d == d) << std::endl; // (d == d) = 1
-	std::cout << "(d != a) = " << (d != a) << std::endl; // (d != a) = 1
-	std::cout << "(d <= a) = " << (d <= a) << std::endl; // (d <= a) = 0
-	std::cout << "(d >= a) = " << (d >= a) << std::endl; // (d >= a) = 1
+bigint & bigint::operator+=(bigint const & other){
+	*this = *this + other;
+	return *this;
+}
 
-	// extra
-	bigint x(12345678); bigint y(5);
-	std::cout << "(x << y) = " << (x << y) << ", x: " << x << ", y: " << y << std::endl;
-	std::cout << "(x >>= y) = " << (x >>= y) << ", x: " << x << ", y: " << y << std::endl;
-	std::cout << "(x >= y) = " << (x >= y) << ", x: " << x << ", y: " << y << std::endl;
+bigint &bigint::operator++() {
+	*this += bigint(1);
+	this->compact();
+	return *this;
+}
 
-	std::cout << "x= " << (x <<= 5) << ", y= " << (y <<= 12) << std::endl;
-	std::cout << "(x >= y) = " << (x >= y) << ", x: " << x << ", y: " << y << std::endl;
+bigint bigint::operator++(int other){
+	(void)other;
+	bigint ret = *this;
+	this->operator++();
+	return ret;
+}
 
-	return (0);
+bigint bigint::operator<<(int dec){
+	bigint ret = *this;
+	ret <<= dec;
+	return ret;
+}
+
+bigint bigint::operator<<(bigint const dec){
+	bigint ret = *this;
+	ret <<= dec;
+	return ret;
+}
+
+bigint &bigint::operator<<=(bigint const dec){
+	bigint ndec = dec;
+	while (ndec > 0){
+		data.emplace(data.begin(), 0);
+		ndec = ndec + bigint(-1);
+	}
+	this->compact();
+	return *this;
+}
+
+bigint &bigint::operator<<=(int dec){
+	while (dec > 0){
+		data.emplace(data.begin(), 0);
+		dec--;
+	}
+	this->compact();
+	return *this;
+}
+
+bigint &bigint::operator>>=(bigint const dec){
+	bigint ndec = dec;
+	while (ndec > bigint(0)){
+		if (data.begin() == data.end())
+			break;
+		data.erase(data.begin());
+		ndec = ndec + bigint(-1);
+	}
+	this->compact();
+	return *this;
+}
+
+bool bigint::operator>(bigint const other)const{
+	if (isneg && !other.isneg)
+		return false;
+	if (!isneg && other.isneg)
+		return false;
+	auto it_this = data.begin();
+	auto it_other = other.data.begin();
+	bool res = false;
+	while(true){
+		if (it_this == data.end() && it_other != other.data.end())
+			return false;
+		if (it_this != data.end() && it_other == other.data.end())
+			return true;
+		if (it_this == data.end() && it_other == other.data.end())
+			return res;
+		if (*it_this != *it_other)
+			res = *it_this > *it_other;
+		it_this++;
+		it_other++;
+	}
+}
+
+bool bigint::operator==(bigint const other)const{
+	if (isneg != other.isneg)
+		return false;
+	auto it_this = data.begin();
+	auto it_other = other.data.begin();
+	while(true){
+		if (it_this == data.end() && it_other != other.data.end())
+			return false;
+		if (it_this != data.end() && it_other == other.data.end())
+			return false;
+		if (it_this == data.end() && it_other == other.data.end())
+			return true;
+		if (*it_this != *it_other)
+			return false;
+		it_this++;
+		it_other++;
+	}
+}
+
+bool bigint::operator>=(bigint const other)const{
+	return (*this > other || *this == other);
+}
+
+bool bigint::operator<(bigint const other)const{
+	return !(*this > other || *this == other);
+}
+bool bigint::operator<=(bigint const other)const{
+	return !(*this > other) || *this == other;
+}
+
+bool bigint::operator!=(bigint const other)const{
+	return !(*this == other);
+}
+
+std::ostream & operator<<(std::ostream & stream, bigint const & big){
+	return big.write(stream);
 }
