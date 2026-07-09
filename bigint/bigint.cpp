@@ -20,7 +20,7 @@ bigint::bigint(int val):data(),isneg(val < 0){
 bigint::bigint(bigint const & other):data(),isneg(other.isneg){
 	if (this == &other)
 		return;
-	for(auto it = other.data.begin(); it != other.data.end(); it++)
+	for(std::vector<int>::const_iterator it = other.data.begin(); it != other.data.end(); it++)
 		data.push_back(*it);
 }
 
@@ -29,7 +29,7 @@ bigint & bigint::operator=(bigint const & other){
 		return *this;
 	this->isneg = other.isneg;
 	data.erase(data.begin(), data.end());
-	for (auto it = other.data.begin(); it != other.data.end(); it++)
+	for ( std::vector<int>::const_iterator it = other.data.begin(); it != other.data.end(); it++)
 		data.push_back(*it);
 	return *this;
 }
@@ -37,14 +37,17 @@ bigint & bigint::operator=(bigint const & other){
 void bigint::compact(){
 	if (data.size() == 0)
 		return;
-	auto start = data.begin();
+	std::vector<int>::iterator start = data.begin();
 	start++;
-	auto end = start;
+		std::vector<int>::iterator end = start;
 	for (; start != data.end(); start++){
 		for (end = start; *start == 0 && end != data.end() && *end == 0; end++);
-		if (*start == 0 && end == data.end()){
-			data.erase(start, end);
-			break;
+		while (*start == 0 && end == data.end()){
+			std::vector<int>::iterator tosuppr = start;
+			start++;
+			data.erase(tosuppr);
+			if (start == end)
+				break;
 		}
 	}
 }
@@ -54,7 +57,7 @@ std::ostream & bigint::write(std::ostream & stream) const{
 		stream << "-";
 	if (data.size() == 0)
 		stream << "0";
-	auto it = data.rbegin();
+	std::reverse_iterator<std::vector<int>::const_iterator> it = data.rbegin();
 /*	for (;it != data.rend() && *it == 0; it++)
 		;
 	if (it == data.rend())
@@ -67,8 +70,8 @@ std::ostream & bigint::write(std::ostream & stream) const{
 bigint bigint::operator+(bigint const & other) const{
 	bigint res;
 	int reste = 0;
-	auto it_a = data.begin();
-	auto it_b = other.data.begin();
+	std::vector<int>::const_iterator it_a = data.begin();
+	std::vector<int>::const_iterator it_b = other.data.begin();
 	while (it_a != data.end() || it_b != other.data.end() || reste != 0){
 		int val_a = 0;
 		int val_b = 0;
@@ -114,9 +117,7 @@ bigint bigint::operator++(int other){
 }
 
 bigint bigint::operator<<(int dec){
-	bigint ret = *this;
-	ret <<= dec;
-	return ret;
+	return this->operator<<(bigint(dec));
 }
 
 bigint bigint::operator<<(bigint const dec){
@@ -127,21 +128,17 @@ bigint bigint::operator<<(bigint const dec){
 
 bigint &bigint::operator<<=(bigint const dec){
 	bigint ndec = dec;
-	while (ndec > 0){
-		data.emplace(data.begin(), 0);
+	while (ndec > bigint(0)){
+		data.insert(data.begin(), 0);
 		ndec = ndec + bigint(-1);
+		std::cout << ndec << "\n";
 	}
 	this->compact();
 	return *this;
 }
 
 bigint &bigint::operator<<=(int dec){
-	while (dec > 0){
-		data.emplace(data.begin(), 0);
-		dec--;
-	}
-	this->compact();
-	return *this;
+	return this->operator<<=(bigint(dec));
 }
 
 bigint &bigint::operator>>=(bigint const dec){
@@ -161,8 +158,8 @@ bool bigint::operator>(bigint const other)const{
 		return false;
 	if (!isneg && other.isneg)
 		return false;
-	auto it_this = data.begin();
-	auto it_other = other.data.begin();
+	std::vector<int>::const_iterator it_this = data.begin();
+	std::vector<int>::const_iterator it_other = other.data.begin();
 	bool res = false;
 	while(true){
 		if (it_this == data.end() && it_other != other.data.end())
@@ -181,8 +178,8 @@ bool bigint::operator>(bigint const other)const{
 bool bigint::operator==(bigint const other)const{
 	if (isneg != other.isneg)
 		return false;
-	auto it_this = data.begin();
-	auto it_other = other.data.begin();
+	std::vector<int>::const_iterator it_this = data.begin();
+	std::vector<int>::const_iterator it_other = other.data.begin();
 	while(true){
 		if (it_this == data.end() && it_other != other.data.end())
 			return false;

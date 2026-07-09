@@ -1,6 +1,6 @@
 CXX = clang++
-LDFLAGS = -g -Wall -Wextra -Werror
-CXXFLAGS = -g -Wall -Wextra -Werror
+LDFLAGS = -g -Wall -Wextra -Werror -std=c++98
+CXXFLAGS = -g -Wall -Wextra -Werror -std=c++98
 
 NAME = bigint
 SOURCES = $(wildcard *.cpp)
