@@ -1,24 +1,18 @@
 #include "bigint.hpp"
 
-bigint		bigint::compact(bigint const & a){ 
+bigint	bigint::compact(bigint const & a){
 	bigint b(a);
-	if (b.data.size() == 0){
-		b.data.push_back(0);
-		b.sign = 1;
+	if (b.data.size() <= 1)
 		return b;
+	while(true){
+		if (b.data.size() <= 1)
+			return b;
+		std::vector<int>::iterator it = b.data.end();
+		it--;
+		if (*it != 0)
+			return b;
+		b.data.erase(it, b.data.end());
 	}
-	std::vector<int>::iterator start = b.data.begin();
-	std::vector<int>::iterator end = start;
-	for(; start != b.data.end() && end != b.data.end(); ++start){
-		for (end = start; *start == 0 && end != b.data.end() && *end == 0; ++end);
-	}
-	if (end == b.data.end() && start != b.data.end() && *start == 0)
-		b.data.erase(start, end);
-	if (b.data.size() == 0){
-		b.data.push_back(0);
-		b.sign = 1;
-	}
-	return b;
 }
 
 bigint::bigint():data(),sign(1){
@@ -91,6 +85,10 @@ bool bigint::operator==(bigint const & o) const{
 	}
 }
 
+bool bigint::operator!=(bigint const & o) const{
+	return !this->operator==(o);
+}
+
 bool bigint::operator>(bigint const & o) const{
 	bigint a = bigint::compact(*this);
 	bigint b = bigint::compact(o);
@@ -102,10 +100,10 @@ bool bigint::operator>(bigint const & o) const{
 			return a.data.size() > b.data.size();
 		return a.data.size() < b.data.size();
 	}
-	std::vector<int>::const_iterator it_a = a.data.begin();
-	std::vector<int>::const_iterator it_b = b.data.begin();
+	std::reverse_iterator<std::vector<int>::const_iterator> it_a = a.data.rbegin();
+	std::reverse_iterator<std::vector<int>::const_iterator> it_b = b.data.rbegin();
 	while (true){
-		if (it_a == a.data.end())
+		if (it_a == a.data.rend())
 			return false;
 		if (*it_a != *it_b){
 			if (a.sign == 1)
@@ -115,4 +113,90 @@ bool bigint::operator>(bigint const & o) const{
 		it_a++;
 		it_b++;
 	}
+}
+
+bool bigint::operator>=(bigint const & o) const{
+	return this->operator==(o) || this->operator>(o);
+}
+
+bool bigint::operator<(bigint const & o) const{
+	return this->operator!=(o) && !this->operator>(o);
+}
+
+bool bigint::operator<=(bigint const & o) const{
+	return this->operator==(o) || this->operator<(o);
+}
+
+bigint		bigint::add_abs(bigint const & a, bigint const & b){
+	bigint ret;
+	ret.data.resize(0);
+	std::vector<int>::const_iterator it_a = a.data.begin();
+	std::vector<int>::const_iterator it_b = b.data.begin();
+	int carry = 0;
+	while (it_a != a.data.end() || it_b != b.data.end() || carry != 0){
+		int val_a = 0;
+		int val_b = 0;
+		if (it_a != a.data.end()){
+			val_a = *it_a;
+			it_a++;
+		}
+		if (it_b != b.data.end()){
+			val_b = *it_b;
+			it_b++;
+		}
+		int sum = val_a + val_b + carry;
+		ret.data.push_back(sum % 10);
+		carry = sum / 10;
+	}
+	ret.sign = a.sign;
+	return bigint::compact(ret);
+}
+
+bigint		bigint::substr(bigint const & a, bigint const & b){
+	bigint ret;
+	ret.data.resize(0);
+	std::vector<int>::const_iterator it_a = a.data.begin();
+	std::vector<int>::const_iterator it_b = b.data.begin();
+	int borrow = 0;
+	while (it_a != a.data.end() || it_b != b.data.end() || borrow != 0){
+		int val_a = 0;
+		int val_b = 0;
+		if (it_a != a.data.end()){
+			val_a = *it_a;
+			it_a++;
+		}
+		if (it_b != b.data.end()){
+			val_b = *it_b;
+			it_b++;
+		}
+		int diff;
+		if (val_a >= (val_b + borrow)){
+			diff = val_a - (val_b + borrow);
+			borrow = 0;
+		}else{
+			diff = 10 + val_a - (val_b + borrow);
+			borrow = 1;
+		}
+		ret.data.push_back(diff);
+	}
+	return bigint::compact(ret);
+}
+
+bigint	 bigint::operator+(bigint const & o) const{
+	bigint a = bigint::compact(*this);
+	bigint b = bigint::compact(o);
+
+	if (a.sign == b.sign)
+		return bigint::add_abs(a, b);
+	a.sign = 1;
+	b.sign = 1;
+	bigint ret;
+	if (a > b){
+		ret = substr(a , b);
+		ret.sign = this->sign;
+	} else if(a < b) {
+		ret = substr(b , a);
+		ret.sign = o.sign;
+	}
+	return ret;
 }

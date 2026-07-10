@@ -4,14 +4,14 @@
 
 #include <limits.h>
 
-/*void test_add(int a, int b, int expected){
+void test_add(int a, int b){
 	bigint e(a);
 	bigint f(b);
-	bigint g(expected);
+	bigint g(a + b);
 
-	std::cerr << e << " + " << f << " = " << (e + f) << " , exepected " << g << std::endl;
+	std::cerr << e << " + " << f << " = " << (e + f) << " , exepected " << a + b << std::endl;
 	assert (e + f == g);
-}*/
+}
 
 void test_equal(int a, int b){
 	bigint e(a);
@@ -60,4 +60,17 @@ int main(void){
 	test_sup(-4242, -242);
 	test_sup(-4242, -4342);
 	test_sup(-242, -4242);
+ 	
+	/*Summ*/
+	test_add(0, 0);
+	test_add(1, 0);
+	test_add(0, 1);
+	test_add(20, 32);
+	test_add(-20, -32);
+	test_add(-32, -20);
+	test_add(-32, 0);
+	test_add(0, -32);
+	test_add(40, -32);
+	test_add(-40, 32);
+	test_add(-32, 40);
 }
